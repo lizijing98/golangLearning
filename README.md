@@ -37,7 +37,7 @@ go SDK 的安装位置：`GOROOT`
 
 ### 3.GO 基本语句
 
-```go
+```
 go build //编译自身包和依赖包
 go install //编译并安装自身包和依赖包
 gofmt //格式化代码
@@ -84,3 +84,6 @@ go 为了保障效率直接分配多一倍的容量，但长度还是实际的�
 
 [深入理解 Go Slice - SegmentFault 思否](https://segmentfault.com/a/1190000017341615)
 
+### 4.字典 map
+
+哈希表(key<==>value)，key 是经过哈希运算的
