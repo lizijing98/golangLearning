@@ -87,3 +87,12 @@ go 为了保障效率直接分配多一倍的容量，但长度还是实际的�
 ### 4.字典 map
 
 哈希表(key<==>value)，key 是经过哈希运算的
+
+### 5.内存逃逸
+
+![image-20211004163228714](img/image-20211004163228714.png)
+
+```shell
+go build -o 10_memory_escape --gcflags "-m -m -l" 10_memory_escape.go > output 2>&output
+```
+
