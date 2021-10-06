@@ -13,7 +13,7 @@ struct Person{
 }*/
 // go 中使用 type+struct 来处理结构体
 
-type Person struct {
+type Student1 struct {
 	name   string
 	age    int
 	gender string
@@ -26,7 +26,7 @@ func main() {
 	fmt.Println("i:", i, "j:", j)
 
 	// 结构体赋值时每个字段都赋值，则字段名可以省略不写
-	xiaoming := Person{
+	xiaoming := Student1{
 		"xiaoming",
 		23,
 		"男",
@@ -42,7 +42,7 @@ func main() {
 	fmt.Println("xiaoming gender:", (*s1).gender)
 
 	// 对部分字段赋值则必须加上指定的 key
-	xiaowang := Person{
+	xiaowang := Student1{
 		name:   "xiaowang",
 		age:    22,
 		gender: "男生"}
