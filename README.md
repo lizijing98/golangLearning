@@ -113,3 +113,34 @@ go build -o 10_memory_escape --gcflags "-m -m -l" 10_memory_escape.go > output 2
 
 [【Go语言学习】包、Init函数与执行顺序_Eric_zhang929的博客-CSDN博客](https://blog.csdn.net/Eric_zhang929/article/details/102550955)
 
+### 8.defer 延迟
+
+1. 关键字：defer 可以用于修饰语句、函数，确保这条语句可以在当前栈退出的时候执行
+
+    ```c
+    lock.Lock()
+    a = "hello"
+    lock.Unlock()//<==经常容易忘掉解锁
+    ```
+
+    go 语言中
+
+    ```go
+    {
+        lock.Lock()
+        defer lock.Unlock()//<==在当前栈退出的时候（例如：函数结束时）执行
+        a = "hello"
+    }
+    
+    /*例如在文件读写时*/
+    {
+        file1,_ := file.Open()
+        defer file1.Close()
+    }
+    ```
+
+2. 一般用于做资源清理工作
+
+3. 解锁、关闭文件
+
+4. 在同一个函数中可以多次调用 defer，类似于栈的机制：先入后出
