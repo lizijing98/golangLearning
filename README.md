@@ -96,3 +96,10 @@ go 为了保障效率直接分配多一倍的容量，但长度还是实际的�
 go build -o 10_memory_escape --gcflags "-m -m -l" 10_memory_escape.go > output 2>&output
 ```
 
+### 6.iota 常量组累加器
+
+1. iota 是常量组计数器
+2. iota 从 0 开始，每换行递增加1
+3. 常量组有个特点，如果不赋值，默认与上一行表达式相同
+4. 如果同一行出现两个 iota 则这两个 iota 值相同
+5. 每个常量组的 iota 是独立的，iota 遇到新的 const 会重置为 0
