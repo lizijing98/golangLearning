@@ -103,3 +103,13 @@ go build -o 10_memory_escape --gcflags "-m -m -l" 10_memory_escape.go > output 2
 3. 常量组有个特点，如果不赋值，默认与上一行表达式相同
 4. 如果同一行出现两个 iota 则这两个 iota 值相同
 5. 每个常量组的 iota 是独立的，iota 遇到新的 const 会重置为 0
+
+### 7.init 函数
+
+1. C 语言中没有 init 函数，一般自己写 init 函数再构造函数中调用
+2. go 语言中再带 init 函数，每一个包中可以包含一个或多个 init 函数
+3. 这个 init 函数再包被引用的时候（import）进行自动调用，不允许显式调用
+4. 有时引用一个包时只想引用包中的 init 函数（eg：MySQL 的 init 对驱动进行初始化），为了避免编译器报错可以使用 '_' 避免报错：`import _ "xxx/xxx"`
+
+[【Go语言学习】包、Init函数与执行顺序_Eric_zhang929的博客-CSDN博客](https://blog.csdn.net/Eric_zhang929/article/details/102550955)
+
