@@ -159,7 +159,33 @@ go 中类的方法不在结构体中写，在结构体外写再绑定
 func (变量名 类名/类指针) 方法名(参数)返回值{}
 ```
 
-<img src="img/image-20211006162212954.png" alt="image-20211006162212954" style="zoom:33%;" />
+```go
+package classSrc
+
+import "fmt"
+
+*type Person struct {
+	name   string
+	age    int
+	gender string
+	score  float64
+}
+
+// go 中对象的方法不在结构体中写，在结构体外写再绑定
+
+func (p *Person) EatPointer() {
+	// 类的方法可以使用自己的成员/指针
+	// 使用指针操作对象本身，不使用指针操作对象的拷贝
+	p.Name = "LiLi"
+	fmt.Printf("%s is eating\n", p.Name)
+}
+func (p Person) Eat() {
+	// 类的方法可以使用自己的成员/指针
+	// 使用指针操作对象本身，不使用指针操作对象的拷贝
+	p.Name = "LiLi"
+	fmt.Printf("%s is eating\n", p.Name)
+}
+```
 
 ### 3.继承
 
@@ -213,10 +239,34 @@ go 语言中使用的不是线程，而是 go 程==>goroutine，go 程是 go 语
 1. 当缓冲区写满时，写阻塞，当被读取后，再恢复写入
 2. 当缓冲区读取完毕，读阻塞
 3. 如果管道没有使用 make 分配空间，那么管道默认是 nil 的，读取写入都会阻塞
-4. 对于一个 channel，读与写次数必须对等，否则会造成死锁
+4. 从一个 nil 的 channel 读入或写入都会造成阻塞（==注意，不会崩溃==）
+5. 对于一个 channel，读与写次数必须对等，否则：
+   1. 在多个 go 程中会造成资源泄露
+   2. 在主 go 程中，会造成死锁
 
 **当 channel 读写次数不一致**
 
 1. 当发生在主 go 程，发生死锁，程序会崩溃
 2. 当发生在子 go 程，会造成内存泄露
 3. 避免此情况，在写入端写入完成后进行 `close()` 关闭；在读出端使用 `for:range` 进行遍历
+
+**channel 的关闭**
+
+1. 从一个已经 close 的 channel 读取数据时会返回零值（不会崩溃）
+2. 向一个 close 的 channel 写入数据会崩溃
+3. 重复关闭一个已经 close 的 channel，程序会崩溃
+4. 关闭管道的动作一定要在写入方，不应该放在读出方，否则写入端的继续写会造成崩溃
+
+**判断一个管道是否已经关闭**
+
+```go
+numsChan := make(chan int, 10)
+value, isOpen := <-numsChan
+```
+
+**单向通道**
+
+为了明确语义，一般用于函数参数：
+
+- 单向读通道
+- 单向写通道

@@ -32,6 +32,8 @@ func main() {
 		}
 		fmt.Println("写入完毕，关闭管道")
 		close(numsChan)
+		//numsChan <- 11//向一个已经 close 的 channel 写入会造成崩溃
+		//close(numsChan)//重复关闭一个已经 close 的 channel 程序会崩溃
 	}()
 
 	//读 20 次
@@ -41,12 +43,24 @@ func main() {
 		/*for i := 0; i < 20; i++ {
 			fmt.Println("<==主 go 程读出:", <-numsChan)//此时只能读到 10 次，再往后读会造成死锁
 		}*/
+
 		// for:range 不知道 channel 是否写完，会一直等待
 		//解决：写入端在写数据完毕时，进行管道关闭，for:range 遍历关闭的管道后，会退出
-		for value := range numsChan {
+		/*for value := range numsChan {
 			fmt.Println("<==主 go 程读出:", value)
+		}*/
+
+		for {
+			value, isOpen := <-numsChan
+			if !isOpen { //判断管道是否关闭
+				fmt.Println("管道已经关闭")
+				break
+			} else {
+				fmt.Println("<==主 go 程读出:", value)
+			}
 		}
 	}()
 
+	//fmt.Println("<==关闭后读出:", <-numsChan) //从一个已经 close 的 channel 读取数据时会返回零值（不会崩溃）
 	time.Sleep(1 * time.Second)
 }
