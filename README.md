@@ -270,3 +270,12 @@ value, isOpen := <-numsChan
 
 - 单向读通道
 - 单向写通道
+
+**select**
+
+当程序中有多个 channel 协同工作，chan1、chan2，在某一时刻，chan1 或 chan2 被触发了，程序要做响应的处理
+
+使用 select 来监听多个 channel，当某个 channel 被触发时（写入、读出、关闭）进行处理
+
+select 语法与 switch...case 很像，但所有分支条件都必须是通道 io
+
