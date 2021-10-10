@@ -19,7 +19,7 @@ func main() {
 	//2.向服务器发送数据
 	sendData := []byte("hello")
 
-	for true {
+	for true { // 保证多次向 Server 发送数据
 		cnt, err := conn.Write(sendData)
 		if err != nil {
 			fmt.Println("conn.Write err:", err)
