@@ -434,3 +434,23 @@ JSON 语法要求最后一个元素后面不能加逗号
 在网络传输过程中，把结构体编码成 JSON 字符串传输
 
 接受 JSON 字符串后，需要把字符串转换成结构体然后操作
+
+注意结构体中小写字母开头的字段不会被编码，同样解码也不会存在
+
+### 5.结构体的标签
+
+```go
+type Teacher struct {
+	Name    string `json:"-"`                 //在使用 JSON 编码时不编码该字段
+	Subject string `json:"Sub_name"`          //在 JSON 编码时会用标签替换原字段名
+	Age     int    `json:"age,string"`        //在 JSON 编码时更改字段数据类型,注意中间逗号左右不能加空格:字段名,字段类型
+	Address string `json:"address,omitempty"` //omitempty表示如果该字段为空则不参与编码
+	gender  string
+}
+```
+
+如果 JSON 格式要求 key 小写或其他名称可以通过标签进行自定
+
+更换数据类型也可以通过标签进行更改
+
+omitempty 标签可以指定字段在 JSON 编码时不参与

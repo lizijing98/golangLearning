@@ -6,10 +6,11 @@ import (
 )
 
 type Student struct {
-	Id     int
-	Name   string
-	Age    int
-	gender string //gender 是小写,小写字母开头在 JSON 编码时会忽略掉
+	Id   int
+	Name string
+	Age  int
+	//gender 是小写,小写字母开头在 JSON 编码时会忽略掉
+	gender string
 }
 
 func main() {
@@ -31,7 +32,7 @@ func main() {
 
 	//2.解码
 	var xiaoming2 Student
-	err = json.Unmarshal([]byte(encodeInfo), &xiaoming2)
+	err = json.Unmarshal(encodeInfo, &xiaoming2)
 	if err != nil {
 		fmt.Println("json.Unmarshal err:", err)
 		return
