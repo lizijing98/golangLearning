@@ -279,3 +279,54 @@ value, isOpen := <-numsChan
 
 select 语法与 switch...case 很像，但所有分支条件都必须是通道 io
 
+## 六、网络编程
+
+### 1.网络分层
+
+<table>
+    <tr>
+        <th>OSI 七层网络模型</th>
+        <th>TCP/IP 四层概念模型</th>
+        <th>对应网络协议</th>
+    </tr>
+    <tr>
+        <th>应用层（Application）</th>
+        <th rowspan="3">应用层</th>
+        <th>HTTP、TFTP、NFS、WAIS、SMTP</th>
+    </tr>
+    <tr>
+        <th>表示层（Presentation）</th>
+        <th>Telnet、Rlogin、SNMP、Gopher</th>
+    </tr>
+    <tr>
+        <th>会话层（Session）</th>
+        <th>SMTP、DNS</th>
+    </tr>
+    <tr>
+        <th>传输层（Transport）</th>
+        <th>传输层</th>
+        <th>TCP、UDP</th>
+    </tr>
+    <tr>
+        <th>网络层（Network）</th>
+        <th>网络层</th>
+        <th>IP、ICMP、ARP、RARP、AKP、UUCP</th>
+    </tr>
+    <tr>
+        <th>数据链路层（Data Link）</th>
+        <th rowspan="2">数据链路层</th>
+        <th>FDDI、Ethernet、Arpanet、PDN、SLIP、PPP</th>
+    </tr>
+    <tr>
+        <th>物理层（Physical）</th>
+        <th>IEEE 802.1A，IEEE 802.2~802.11</th>
+    </tr>
+</table>
+
+
+### 2.socket
+
+<img src="img/v2-7105d213a9207bf0d497455c652df7e2_r.jpg" alt="preview" style="zoom: 50%;" />
+
+### 3.http
+
