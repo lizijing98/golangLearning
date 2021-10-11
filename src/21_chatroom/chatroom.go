@@ -77,9 +77,24 @@ func handler(conn net.Conn) {
 			fmt.Println(newUser.Id, "conn.Read err:", err)
 			return
 		}
-		fmt.Println("Server <==", newUser.Id, "| cnt:", cnt, "| data:", string(buffer[:cnt-1])) //读取的长度 cnt 包括了从键盘输入的换行
-		userSend := fmt.Sprintf("[%s]:%s", newUser.Name, string(buffer[:cnt-1]))
-		message <- userSend
+		receivedStr := string(buffer[:cnt-1])
+		fmt.Println("Server <==", newUser.Id, "| cnt:", cnt, "| data:", receivedStr) //读取的长度 cnt 包括了从键盘输入的换行
+		//======业务逻辑开启======
+		switch {
+		//1.查询当前所有用户命令 -who
+		//  a.先判断接收的数据是不是 -who ==> 长度==4&&字符串=="-who"
+		//  b.遍历 allUsers
+		case receivedStr == "-who" && len(receivedStr) == 4:
+			toClient := "所有在线用户:"
+			for _, user := range allUsers {
+				toClient = fmt.Sprintf("%s\nid:%s username:%s", toClient, user.Id, user.Name)
+			}
+			newUser.Msg <- toClient
+		default:
+			userSend := fmt.Sprintf("[%s]:%s", newUser.Name, receivedStr)
+			message <- userSend
+		}
+		//======业务逻辑结束======
 	}
 }
 
