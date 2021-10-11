@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 //此 demo 未做多文件工程，只写在一个文件中，不做代码整理
@@ -90,6 +91,12 @@ func handler(conn net.Conn) {
 				toClient = fmt.Sprintf("%s\nid:%s username:%s", toClient, user.Id, user.Name)
 			}
 			newUser.Msg <- toClient
+		case strings.HasPrefix(receivedStr, "-rename"):
+			newName := strings.TrimLeft(receivedStr, "-rename ")
+			newUser.Name = newName
+			result := fmt.Sprintf("[%s]:当前用户名为:%s", newUser.Name, newUser.Name)
+			newUser.Msg <- result
+
 		default:
 			userSend := fmt.Sprintf("[%s]:%s", newUser.Name, receivedStr)
 			message <- userSend
