@@ -68,6 +68,7 @@ func handler(conn net.Conn) {
 	//上线信息广播通知所有人
 	loginInfoTo := fmt.Sprintf("[广播]用户:%s 已登录", newUser.Name)
 	message <- loginInfoTo
+	//具体业务
 	for {
 		//读取客户端发送的数据
 		buffer := make([]byte, 1024)
@@ -77,6 +78,8 @@ func handler(conn net.Conn) {
 			return
 		}
 		fmt.Println("Server <==", newUser.Id, "| cnt:", cnt, "| data:", string(buffer[:cnt-1])) //读取的长度 cnt 包括了从键盘输入的换行
+		userSend := fmt.Sprintf("[%s]:%s", newUser.Name, string(buffer[:cnt-1]))
+		message <- userSend
 	}
 }
 
@@ -89,7 +92,7 @@ func broadcast() {
 		fmt.Println("广播 broadcast 监听中...")
 		//1.从 message channel 中读取数据
 		info := <-message
-		fmt.Println("|广播| message channel <==", info)
+		fmt.Printf("|广播| message channel <==\"%s\"\n", info)
 		//2.将数据写入到每个用户的 msg channel 中
 		for _, user := range allUsers {
 			//如果 msg 是非缓冲的，会在此处会阻塞
@@ -103,7 +106,7 @@ func writeBackToClient(user *User, conn net.Conn) {
 	fmt.Printf("user:%s的 goroutine 正在监听自己的 msg channel\n", user.Name)
 	//不断读取自身的 msg channel
 	for data := range user.Msg {
-		fmt.Printf("|%s| <== %s\n", user.Name, data)
+		fmt.Printf("|%s| <== \"%s\"\n", user.Name, data)
 		_, err := conn.Write([]byte(data + LF))
 		if err != nil {
 			fmt.Println("conn.Write err:", err)
