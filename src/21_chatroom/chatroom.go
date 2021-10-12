@@ -91,11 +91,21 @@ func handler(conn net.Conn) {
 				toClient = fmt.Sprintf("%s\nid:%s username:%s", toClient, user.Id, user.Name)
 			}
 			newUser.Msg <- toClient
-		case strings.HasPrefix(receivedStr, "-rename"):
-			newName := strings.TrimLeft(receivedStr, "-rename ")
-			newUser.Name = newName
-			result := fmt.Sprintf("[%s]:当前用户名为:%s", newUser.Name, newUser.Name)
-			newUser.Msg <- result
+		//2.用户重命名 -rename|[new_name]
+		// a.先判断接受的数据是不是重命名命令 ==> -rename 开头
+		// b.取接受的数据中 -rename 后的 new_name 作为新的用户名
+		// c.更新 newUser 的 Name 字段并更新 allUsers 中的数据
+		case strings.HasPrefix(receivedStr, "-rename|"):
+			newName := strings.Split(receivedStr, "|")[1]
+			if newName != "" {
+				newUser.Name = newName
+				allUsers[newUser.Id] = newUser //更新 allUsers 中的数据
+				result := fmt.Sprintf("[%s]:当前用户名为:%s", newUser.Name, newUser.Name)
+				newUser.Msg <- result
+			} else {
+				result := fmt.Sprintf("[%s]:新用户名不能为空", newUser.Name)
+				newUser.Msg <- result
+			}
 
 		default:
 			userSend := fmt.Sprintf("[%s]:%s", newUser.Name, receivedStr)
@@ -128,7 +138,7 @@ func writeBackToClient(user *User, conn net.Conn) {
 	fmt.Printf("user:%s的 goroutine 正在监听自己的 msg channel\n", user.Name)
 	//不断读取自身的 msg channel
 	for data := range user.Msg {
-		fmt.Printf("|%s| <== \"%s\"\n", user.Name, data)
+		fmt.Printf("|%s| <== \"%s\"\n", user.Id, data)
 		_, err := conn.Write([]byte(data + LF))
 		if err != nil {
 			fmt.Println("conn.Write err:", err)
