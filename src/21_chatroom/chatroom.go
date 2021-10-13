@@ -25,7 +25,7 @@ var LF = "\n"
 
 func main() {
 	//创建服务器
-	fmt.Println("服务器启动中......")
+	fmt.Println("|Server log|服务器启动中......")
 	listener, err := net.Listen("tcp", ":9301")
 	if err != nil {
 		fmt.Println("net.Listen err:", err)
@@ -33,9 +33,9 @@ func main() {
 	}
 	//启动全局唯一的 goroutine 负责监听 message channel 写给所有 User
 	go broadcast()
-	fmt.Println("服务器启动成功!")
+	fmt.Println("|Server log|服务器启动成功!")
 	for true {
-		fmt.Println("主 goroutine 监听中......")
+		fmt.Println("|Server log|主 goroutine 监听中......")
 		//监听
 		conn, err := listener.Accept()
 		if err != nil {
@@ -43,7 +43,7 @@ func main() {
 			return
 		}
 		//建立连接
-		fmt.Printf("新连接:%s建立成功\n", conn.RemoteAddr().String())
+		fmt.Printf("|Server log|新连接:%s建立成功\n", conn.RemoteAddr().String())
 		//启动处理业务的 goroutine
 		go handler(conn)
 	}
@@ -53,7 +53,7 @@ func main() {
 func handler(conn net.Conn) {
 	//客户端与服务器建立连接时，会有 ip 和 port，是唯一的
 	clientAddr := conn.RemoteAddr().String()
-	fmt.Printf("%s:启动业务\n", clientAddr)
+	fmt.Printf("|Server log|%s:启动业务\n", clientAddr)
 	//创建一个 User
 	newUser := User{
 		Id:   clientAddr,            //id 不会修改，作为在 map 中的 key
@@ -64,6 +64,10 @@ func handler(conn net.Conn) {
 	go writeBackToClient(&newUser, conn)
 	//添加 newUser 至 allUsers 中
 	allUsers[newUser.Id] = newUser
+	//定义 isQuit channel 用于处理退出信号
+	var isQuit = make(chan bool)
+	//启动 goroutine 负责监听退出信号
+	go clear(&newUser, conn, isQuit)
 	loginInfoClient := fmt.Sprintf("用户:%s 你好", newUser.Name)
 	newUser.Msg <- loginInfoClient
 	//上线信息广播通知所有人
@@ -74,18 +78,24 @@ func handler(conn net.Conn) {
 		//读取客户端发送的数据
 		buffer := make([]byte, 1024)
 		cnt, err := conn.Read(buffer)
+		//如果读到的数据的 cnt==0 则为 ^C 主动退出
+		if cnt == 0 {
+			fmt.Printf("|Server log|[%s]客户端主动退出(^C),开始进行进行清理工作\n", newUser.Id)
+			//在这里不进行真正的退出动作，而是发送一个退出信号，统一做退出处理，使用一个新的 channel 做信号传递
+			isQuit <- true
+		}
 		if err != nil {
-			fmt.Println(newUser.Id, "conn.Read err:", err)
+			fmt.Println(newUser.Id, "conn.Read err:", err, "cnt:", cnt)
 			return
 		}
 		receivedStr := string(buffer[:cnt-1])
-		fmt.Println("Server <==", newUser.Id, "| cnt:", cnt, "| data:", receivedStr) //读取的长度 cnt 包括了从键盘输入的换行
+		fmt.Println("|Server log|Server <==", newUser.Id, "| cnt:", cnt, "| data:", receivedStr) //读取的长度 cnt 包括了从键盘输入的换行
 		//======业务逻辑开启======
 		switch {
 		//1.查询当前所有用户命令 -who
 		//  a.先判断接收的数据是不是 -who ==> 长度==4&&字符串=="-who"
 		//  b.遍历 allUsers
-		case receivedStr == "-who" && len(receivedStr) == 4:
+		case len(receivedStr) == 4 && receivedStr == "-who":
 			toClient := "所有在线用户:"
 			for _, user := range allUsers {
 				toClient = fmt.Sprintf("%s\nid:%s username:%s", toClient, user.Id, user.Name)
@@ -106,7 +116,10 @@ func handler(conn net.Conn) {
 				result := fmt.Sprintf("[%s]:新用户名不能为空", newUser.Name)
 				newUser.Msg <- result
 			}
-
+		//3.用户主动退出 -exit
+		case len(receivedStr) == 5 && receivedStr == "-exit":
+			fmt.Printf("|%s|客户端主动退出(-exit),开始进行进行清理工作\n", newUser.Id)
+			isQuit <- true
 		default:
 			userSend := fmt.Sprintf("[%s]:%s", newUser.Name, receivedStr)
 			message <- userSend
@@ -117,11 +130,11 @@ func handler(conn net.Conn) {
 
 //向所有用户广播消息，启动一个全局唯一的 goroutine
 func broadcast() {
-	fmt.Println("广播 goroutine 启动!")
-	defer fmt.Println("广播 goroutine 停止")
+	fmt.Println("|Server log|广播 goroutine 启动!")
+	defer fmt.Println("|Server log|广播 goroutine 停止")
 
 	for {
-		fmt.Println("广播 broadcast 监听中...")
+		fmt.Println("|Server log|广播 broadcast 监听中...")
 		//1.从 message channel 中读取数据
 		info := <-message
 		fmt.Printf("|广播| message channel <==\"%s\"\n", info)
@@ -135,13 +148,30 @@ func broadcast() {
 
 //每个连接需要再启动一个 goroutine：读取 message 的数据发送给 User 的 Client
 func writeBackToClient(user *User, conn net.Conn) {
-	fmt.Printf("user:%s的 goroutine 正在监听自己的 msg channel\n", user.Name)
+	fmt.Printf("|%s|user:%s的 goroutine 正在监听自己的 msg channel\n", user.Id, user.Name)
 	//不断读取自身的 msg channel
 	for data := range user.Msg {
 		fmt.Printf("|%s| <== \"%s\"\n", user.Id, data)
 		_, err := conn.Write([]byte(data + LF))
 		if err != nil {
 			fmt.Println("conn.Write err:", err)
+			return
+		}
+	}
+}
+
+//启动一个 goroutine 只负责监听退出信号，触发后进行清理工作：delete map、close conn
+func clear(user *User, conn net.Conn, isQuit chan bool) {
+	fmt.Printf("|%s|退出监听 goroutine 已启动\n", user.Id)
+	defer fmt.Printf("|%s|退出监听 goroutine 已退出\n", user.Id)
+	for {
+		select {
+		case <-isQuit:
+			fmt.Printf("|%s|清理工作进行中...\n", user.Id)
+			delete(allUsers, user.Id)
+			_ = conn.Close()
+			logoutInfo := fmt.Sprintf("[广播]:用户%s已退出", user.Name)
+			message <- logoutInfo
 			return
 		}
 	}
