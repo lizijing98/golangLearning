@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 )
 
 //此 demo 未做多文件工程，只写在一个文件中，不做代码整理
@@ -66,8 +67,10 @@ func handler(conn net.Conn) {
 	allUsers[newUser.Id] = newUser
 	//定义 isQuit channel 用于处理退出信号
 	var isQuit = make(chan bool)
+	//定义 resetTimer channel 用于告知 clear() 保活用户
+	var resetTimer = make(chan bool)
 	//启动 goroutine 负责监听退出信号
-	go clear(&newUser, conn, isQuit)
+	go clear(&newUser, conn, isQuit, resetTimer)
 	loginInfoClient := fmt.Sprintf("用户:%s 你好", newUser.Name)
 	newUser.Msg <- loginInfoClient
 	//上线信息广播通知所有人
@@ -79,7 +82,8 @@ func handler(conn net.Conn) {
 		buffer := make([]byte, 1024)
 		cnt, err := conn.Read(buffer)
 		//如果读到的数据的 cnt==0 则为 ^C 主动退出
-		if cnt == 0 {
+		if cnt == 0 { //TODO:此处超时退出会触发，需要优化
+			fmt.Println(newUser.Id, "conn.Read err:", err, "cnt:", cnt)
 			fmt.Printf("|Server log|[%s]客户端主动退出(^C),开始进行进行清理工作\n", newUser.Id)
 			//在这里不进行真正的退出动作，而是发送一个退出信号，统一做退出处理，使用一个新的 channel 做信号传递
 			isQuit <- true
@@ -101,21 +105,24 @@ func handler(conn net.Conn) {
 				toClient = fmt.Sprintf("%s\nid:%s username:%s", toClient, user.Id, user.Name)
 			}
 			newUser.Msg <- toClient
+			resetTimer <- true
 		//2.用户重命名 -rename|[new_name]
 		// a.先判断接受的数据是不是重命名命令 ==> -rename 开头
 		// b.取接受的数据中 -rename 后的 new_name 作为新的用户名
 		// c.更新 newUser 的 Name 字段并更新 allUsers 中的数据
 		case strings.HasPrefix(receivedStr, "-rename|"):
 			newName := strings.Split(receivedStr, "|")[1]
+			var result string
 			if newName != "" {
 				newUser.Name = newName
 				allUsers[newUser.Id] = newUser //更新 allUsers 中的数据
-				result := fmt.Sprintf("[%s]:当前用户名为:%s", newUser.Name, newUser.Name)
+				result = fmt.Sprintf("[%s]:当前用户名为:%s", newUser.Name, newUser.Name)
 				newUser.Msg <- result
 			} else {
-				result := fmt.Sprintf("[%s]:新用户名不能为空", newUser.Name)
-				newUser.Msg <- result
+				result = fmt.Sprintf("[%s]:新用户名不能为空", newUser.Name)
 			}
+			newUser.Msg <- result
+			resetTimer <- true
 		//3.用户主动退出 -exit
 		case len(receivedStr) == 5 && receivedStr == "-exit":
 			fmt.Printf("|%s|客户端主动退出(-exit),开始进行进行清理工作\n", newUser.Id)
@@ -123,6 +130,7 @@ func handler(conn net.Conn) {
 		default:
 			userSend := fmt.Sprintf("[%s]:%s", newUser.Name, receivedStr)
 			message <- userSend
+			resetTimer <- true
 		}
 		//======业务逻辑结束======
 	}
@@ -161,9 +169,9 @@ func writeBackToClient(user *User, conn net.Conn) {
 }
 
 //启动一个 goroutine 只负责监听退出信号，触发后进行清理工作：delete map、close conn
-func clear(user *User, conn net.Conn, isQuit chan bool) {
-	fmt.Printf("|%s|退出监听 goroutine 已启动\n", user.Id)
-	defer fmt.Printf("|%s|退出监听 goroutine 已退出\n", user.Id)
+func clear(user *User, conn net.Conn, isQuit, resetTimer chan bool) {
+	fmt.Printf("|%s|'退出监听' goroutine 已启动\n", user.Id)
+	defer fmt.Printf("|%s|'退出监听' goroutine 已退出\n", user.Id)
 	for {
 		select {
 		case <-isQuit:
@@ -173,6 +181,16 @@ func clear(user *User, conn net.Conn, isQuit chan bool) {
 			logoutInfo := fmt.Sprintf("[广播]:用户%s已退出", user.Name)
 			message <- logoutInfo
 			return
+		case <-time.After(60 * time.Second):
+			fmt.Printf("|Server log|[%s]客户端超时退出,开始进行清理工作", user.Id)
+			fmt.Printf("|%s|清理工作进行中...\n", user.Id)
+			delete(allUsers, user.Id)
+			_ = conn.Close()
+			logoutInfo := fmt.Sprintf("[广播]:用户%s已超时离线", user.Name)
+			message <- logoutInfo
+			return
+		case <-resetTimer:
+			fmt.Printf("|%s|计时器已重置\n", user.Id)
 		}
 	}
 }
