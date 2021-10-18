@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,8 @@ type User struct {
 	Name string
 	Msg  chan string
 }
+
+var lock sync.RWMutex
 
 //全局的 map 结构存储所有的 User,上限设为 500
 var allUsers = make(map[string]User, 500)
@@ -64,7 +67,9 @@ func handler(conn net.Conn) {
 	//启动 goroutine 负责将 msg 信息返回给 Client
 	go writeBackToClient(&newUser, conn)
 	//添加 newUser 至 allUsers 中
+	lock.Lock()
 	allUsers[newUser.Id] = newUser
+	lock.Unlock()
 	//定义 isQuit channel 用于处理退出信号
 	var isQuit = make(chan bool)
 	//定义 resetTimer channel 用于告知 clear() 保活用户
@@ -82,7 +87,8 @@ func handler(conn net.Conn) {
 		buffer := make([]byte, 1024)
 		cnt, err := conn.Read(buffer)
 		//如果读到的数据的 cnt==0 则为 ^C 主动退出
-		if cnt == 0 { //TODO:此处超时退出会触发，需要优化
+		//TODO:此处超时退出会触发，需要优化，修改主动退出逻辑，利用 os.Signal 包中信号捕获实现退出
+		if cnt == 0 {
 			fmt.Println(newUser.Id, "conn.Read err:", err, "cnt:", cnt)
 			fmt.Printf("|Server log|[%s]客户端主动退出(^C),开始进行进行清理工作\n", newUser.Id)
 			//在这里不进行真正的退出动作，而是发送一个退出信号，统一做退出处理，使用一个新的 channel 做信号传递
@@ -101,9 +107,11 @@ func handler(conn net.Conn) {
 		//  b.遍历 allUsers
 		case len(receivedStr) == 4 && receivedStr == "-who":
 			toClient := "所有在线用户:"
+			lock.Lock()
 			for _, user := range allUsers {
 				toClient = fmt.Sprintf("%s\nid:%s username:%s", toClient, user.Id, user.Name)
 			}
+			lock.Unlock()
 			newUser.Msg <- toClient
 			resetTimer <- true
 		//2.用户重命名 -rename|[new_name]
@@ -115,7 +123,9 @@ func handler(conn net.Conn) {
 			var result string
 			if newName != "" {
 				newUser.Name = newName
+				lock.Lock()
 				allUsers[newUser.Id] = newUser //更新 allUsers 中的数据
+				lock.Unlock()
 				result = fmt.Sprintf("[%s]:当前用户名为:%s", newUser.Name, newUser.Name)
 				newUser.Msg <- result
 			} else {
@@ -147,10 +157,12 @@ func broadcast() {
 		info := <-message
 		fmt.Printf("|广播| message channel <==\"%s\"\n", info)
 		//2.将数据写入到每个用户的 msg channel 中
+		lock.Lock()
 		for _, user := range allUsers {
 			//如果 msg 是非缓冲的，会在此处会阻塞
 			user.Msg <- info
 		}
+		lock.Unlock()
 	}
 }
 
@@ -176,7 +188,9 @@ func clear(user *User, conn net.Conn, isQuit, resetTimer chan bool) {
 		select {
 		case <-isQuit:
 			fmt.Printf("|%s|清理工作进行中...\n", user.Id)
+			lock.Lock()
 			delete(allUsers, user.Id)
+			lock.Unlock()
 			_ = conn.Close()
 			logoutInfo := fmt.Sprintf("[广播]:用户%s已退出", user.Name)
 			message <- logoutInfo
@@ -184,7 +198,9 @@ func clear(user *User, conn net.Conn, isQuit, resetTimer chan bool) {
 		case <-time.After(60 * time.Second):
 			fmt.Printf("|Server log|[%s]客户端超时退出,开始进行清理工作", user.Id)
 			fmt.Printf("|%s|清理工作进行中...\n", user.Id)
+			lock.Lock()
 			delete(allUsers, user.Id)
+			lock.Unlock()
 			_ = conn.Close()
 			logoutInfo := fmt.Sprintf("[广播]:用户%s已超时离线", user.Name)
 			message <- logoutInfo
