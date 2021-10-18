@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
 	// 1.定义字典
@@ -45,5 +47,4 @@ func main() {
 	// 删除一个不存在的 key,不会报错
 	fmt.Printf("删除无效的 key:%s\n", idNames[5])
 
-	// 7.并发处理时，需要对 Map 进行上锁//TODO
 }
