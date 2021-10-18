@@ -118,7 +118,7 @@ Go 的源文件以 `.go` 为后缀名存储，文件名均有小写字母组成�
 
 ### 3.slice 的容量与长度
 
-![image-20211004114838295](img/image-20211004114838295.png)
+![image-20211004114838295](https://i.loli.net/2021/10/18/itNekj7LwSgxYmr.png)
 
 go 为了保障效率直接分配多一倍的容量，但长度还是实际的使用长度，在容量为达到当前上限前不会再分配，直至达到上限
 
@@ -130,7 +130,7 @@ go 为了保障效率直接分配多一倍的容量，但长度还是实际的�
 
 ### 5.内存逃逸
 
-![image-20211004163228714](img/image-20211004163228714.png)
+![image-20211004163228714](https://i.loli.net/2021/10/18/wtgo7CxFinRDOjM.png)
 
 ```shell
 go build -o 10_memory_escape --gcflags "-m -m -l" 10_memory_escape.go > output 2>&output
@@ -366,7 +366,7 @@ select 语法与 switch...case 很像，但所有分支条件都必须是通道 
 
 ### 2.socket
 
-<img src="img/v2-7105d213a9207bf0d497455c652df7e2_r.jpg" alt="preview" style="zoom: 50%;" />
+<img src="https://i.loli.net/2021/10/18/F8zkLiAreg2o71J.jpg" alt="preview" style="zoom: 50%;" />
 
 ### 3.http
 
@@ -389,7 +389,7 @@ HTTP 协议：我们使用浏览器访问的时候发送的就是 HTTP 请求
 
 #### ②.http 请求报文格式
 
-![HTTP 请求报文由请求行、请求头部、空行 和 请求包体 4 个部分组成](img/format,png.jpeg)
+![HTTP 请求报文由请求行、请求头部、空行 和 请求包体 4 个部分组成](https://i.loli.net/2021/10/18/TF24Q6sEJKrOe8N.jpg)
 
 一个 HTTP 请求可以分为四部分
 
@@ -436,7 +436,7 @@ HTTP 协议：我们使用浏览器访问的时候发送的就是 HTTP 请求
 
 #### ③.http 响应报文格式
 
-![img](img/Center.png)
+![img](https://i.loli.net/2021/10/18/O73WxNlAXekymD9.png)
 
 一个 HTTP 响应体包含四部分
 
